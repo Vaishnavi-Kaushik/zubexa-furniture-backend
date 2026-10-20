@@ -1,6 +1,5 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-
 const User = require("../models/User");
 
 // =========================================================
@@ -34,10 +33,6 @@ const registerUser = async (req, res) => {
       password,
     } = req.body;
 
-    // =====================================================
-    // VALIDATION
-    // =====================================================
-
     if (
       !fullName ||
       !email ||
@@ -48,10 +43,6 @@ const registerUser = async (req, res) => {
         message: "All fields are required",
       });
     }
-
-    // =====================================================
-    // CHECK EXISTING USER
-    // =====================================================
 
     const existingUser = await User.findOne({
       email: email.toLowerCase().trim(),
@@ -64,10 +55,6 @@ const registerUser = async (req, res) => {
       });
     }
 
-    // =====================================================
-    // HASH PASSWORD
-    // =====================================================
-
     const salt = await bcrypt.genSalt(10);
 
     const hashedPassword =
@@ -76,41 +63,22 @@ const registerUser = async (req, res) => {
         salt
       );
 
-    // =====================================================
-    // CREATE NORMAL USER
-    // =====================================================
-
     const user = await User.create({
       fullName: fullName.trim(),
-
       email: email.toLowerCase().trim(),
-
       phone: phone.trim(),
-
       password: hashedPassword,
-
       role: "user",
     });
-
-    // =====================================================
-    // GENERATE TOKEN
-    // =====================================================
 
     const token = generateToken(
       user._id,
       user.role
     );
 
-    // =====================================================
-    // RESPONSE
-    // =====================================================
-
     return res.status(201).json({
-      message:
-        "Registration successful",
-
+      message: "Registration successful",
       token,
-
       user: {
         id: user._id,
         fullName: user.fullName,
@@ -147,20 +115,12 @@ const loginUser = async (
       password,
     } = req.body;
 
-    // =====================================================
-    // VALIDATION
-    // =====================================================
-
     if (!email || !password) {
       return res.status(400).json({
         message:
           "Email and password are required",
       });
     }
-
-    // =====================================================
-    // FIND USER
-    // =====================================================
 
     const user = await User.findOne({
       email: email.toLowerCase().trim(),
@@ -172,10 +132,6 @@ const loginUser = async (
           "Invalid email or password",
       });
     }
-
-    // =====================================================
-    // CHECK PASSWORD
-    // =====================================================
 
     const isMatch =
       await bcrypt.compare(
@@ -190,25 +146,14 @@ const loginUser = async (
       });
     }
 
-    // =====================================================
-    // GENERATE ROLE-AWARE TOKEN
-    // =====================================================
-
     const token = generateToken(
       user._id,
       user.role
     );
 
-    // =====================================================
-    // RESPONSE
-    // =====================================================
-
     return res.status(200).json({
-      message:
-        "Login successful",
-
+      message: "Login successful",
       token,
-
       user: {
         id: user._id,
         fullName: user.fullName,
@@ -233,11 +178,6 @@ const loginUser = async (
 // =========================================================
 // CREATE ADMIN
 // POST /api/auth/create-admin
-//
-// This endpoint requires:
-// x-admin-setup-key: YOUR_SECRET_KEY
-//
-// Keep ADMIN_SETUP_KEY only in backend .env
 // =========================================================
 
 const createAdmin = async (
@@ -253,10 +193,6 @@ const createAdmin = async (
       setupKey,
     } = req.body;
 
-    // =====================================================
-    // SETUP KEY CHECK
-    // =====================================================
-
     const adminSetupKey =
       process.env.ADMIN_SETUP_KEY;
 
@@ -271,7 +207,6 @@ const createAdmin = async (
       });
     }
 
-    // Allow setup key either from header or body
     const providedSetupKey =
       req.headers[
         "x-admin-setup-key"
@@ -288,10 +223,6 @@ const createAdmin = async (
       });
     }
 
-    // =====================================================
-    // VALIDATION
-    // =====================================================
-
     if (
       !fullName ||
       !email ||
@@ -303,10 +234,6 @@ const createAdmin = async (
           "Full name, email, phone and password are required.",
       });
     }
-
-    // =====================================================
-    // CHECK EXISTING USER
-    // =====================================================
 
     const existingUser =
       await User.findOne({
@@ -321,10 +248,6 @@ const createAdmin = async (
       });
     }
 
-    // =====================================================
-    // HASH PASSWORD
-    // =====================================================
-
     const salt =
       await bcrypt.genSalt(10);
 
@@ -334,35 +257,22 @@ const createAdmin = async (
         salt
       );
 
-    // =====================================================
-    // CREATE ADMIN
-    // =====================================================
-
     const admin =
       await User.create({
         fullName:
           fullName.trim(),
-
         email:
           email.toLowerCase().trim(),
-
         phone:
           phone.trim(),
-
         password:
           hashedPassword,
-
         role: "admin",
       });
-
-    // =====================================================
-    // RESPONSE
-    // =====================================================
 
     return res.status(201).json({
       message:
         "Admin account created successfully.",
-
       user: {
         id: admin._id,
         fullName:
@@ -391,6 +301,304 @@ const createAdmin = async (
 };
 
 // =========================================================
+// UPDATE PROFILE
+// PUT /api/auth/profile
+// PROTECTED
+// =========================================================
+
+const updateProfile = async (
+  req,
+  res
+) => {
+  try {
+    const {
+      fullName,
+      email,
+      phone,
+    } = req.body;
+
+    // -----------------------------------------
+    // VALIDATION
+    // -----------------------------------------
+
+    if (
+      !fullName ||
+      !email ||
+      !phone
+    ) {
+      return res.status(400).json({
+        message:
+          "Full name, email and phone are required.",
+      });
+    }
+
+    const cleanName =
+      fullName.trim();
+
+    const cleanEmail =
+      email.toLowerCase().trim();
+
+    const cleanPhone =
+      phone.trim();
+
+    if (!cleanName) {
+      return res.status(400).json({
+        message:
+          "Full name cannot be empty.",
+      });
+    }
+
+    if (!cleanEmail) {
+      return res.status(400).json({
+        message:
+          "Email cannot be empty.",
+      });
+    }
+
+    if (!cleanPhone) {
+      return res.status(400).json({
+        message:
+          "Phone cannot be empty.",
+      });
+    }
+
+    // -----------------------------------------
+    // CHECK EMAIL ALREADY USED
+    // -----------------------------------------
+
+    const existingUser =
+      await User.findOne({
+        email: cleanEmail,
+        _id: {
+          $ne: req.user._id,
+        },
+      });
+
+    if (existingUser) {
+      return res.status(400).json({
+        message:
+          "This email is already registered with another account.",
+      });
+    }
+
+    // -----------------------------------------
+    // GET CURRENT USER
+    // -----------------------------------------
+
+    const user =
+      await User.findById(
+        req.user._id
+      );
+
+    if (!user) {
+      return res.status(404).json({
+        message:
+          "User not found.",
+      });
+    }
+
+    // -----------------------------------------
+    // UPDATE USER
+    // -----------------------------------------
+
+    user.fullName =
+      cleanName;
+
+    user.email =
+      cleanEmail;
+
+    user.phone =
+      cleanPhone;
+
+    await user.save();
+
+    // -----------------------------------------
+    // RESPONSE
+    // -----------------------------------------
+
+    return res.status(200).json({
+      message:
+        "Profile updated successfully.",
+      user: {
+        id: user._id,
+        fullName:
+          user.fullName,
+        email:
+          user.email,
+        phone:
+          user.phone,
+        role:
+          user.role,
+      },
+    });
+  } catch (error) {
+    console.error(
+      "Update Profile Error:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Failed to update profile.",
+      error:
+        error.message,
+    });
+  }
+};
+
+// =========================================================
+// CHANGE PASSWORD
+// PUT /api/auth/change-password
+// PROTECTED
+// =========================================================
+
+const changePassword = async (
+  req,
+  res
+) => {
+  try {
+    const {
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    } = req.body;
+
+    // -----------------------------------------
+    // VALIDATION
+    // -----------------------------------------
+
+    if (
+      !currentPassword ||
+      !newPassword ||
+      !confirmPassword
+    ) {
+      return res.status(400).json({
+        message:
+          "Current password, new password and confirm password are required.",
+      });
+    }
+
+    // -----------------------------------------
+    // CHECK NEW PASSWORD MATCH
+    // -----------------------------------------
+
+    if (
+      newPassword !==
+      confirmPassword
+    ) {
+      return res.status(400).json({
+        message:
+          "New password and confirm password do not match.",
+      });
+    }
+
+    // -----------------------------------------
+    // PASSWORD LENGTH
+    // -----------------------------------------
+
+    if (
+      newPassword.length < 6
+    ) {
+      return res.status(400).json({
+        message:
+          "New password must be at least 6 characters.",
+      });
+    }
+
+    // -----------------------------------------
+    // GET USER WITH PASSWORD
+    // -----------------------------------------
+
+    const user =
+      await User.findById(
+        req.user._id
+      );
+
+    if (!user) {
+      return res.status(404).json({
+        message:
+          "User not found.",
+      });
+    }
+
+    // -----------------------------------------
+    // CHECK CURRENT PASSWORD
+    // -----------------------------------------
+
+    const isCurrentPasswordCorrect =
+      await bcrypt.compare(
+        currentPassword,
+        user.password
+      );
+
+    if (
+      !isCurrentPasswordCorrect
+    ) {
+      return res.status(400).json({
+        message:
+          "Current password is incorrect.",
+      });
+    }
+
+    // -----------------------------------------
+    // PREVENT SAME PASSWORD
+    // -----------------------------------------
+
+    const isSamePassword =
+      await bcrypt.compare(
+        newPassword,
+        user.password
+      );
+
+    if (isSamePassword) {
+      return res.status(400).json({
+        message:
+          "New password must be different from your current password.",
+      });
+    }
+
+    // -----------------------------------------
+    // HASH NEW PASSWORD
+    // -----------------------------------------
+
+    const salt =
+      await bcrypt.genSalt(10);
+
+    const hashedPassword =
+      await bcrypt.hash(
+        newPassword,
+        salt
+      );
+
+    user.password =
+      hashedPassword;
+
+    await user.save();
+
+    // -----------------------------------------
+    // RESPONSE
+    // -----------------------------------------
+
+    return res.status(200).json({
+      message:
+        "Password changed successfully.",
+    });
+  } catch (error) {
+    console.error(
+      "Change Password Error:",
+      error
+    );
+
+    return res.status(500).json({
+      message:
+        "Failed to change password.",
+      error:
+        error.message,
+    });
+  }
+};
+
+// =========================================================
 // EXPORT
 // =========================================================
 
@@ -398,4 +606,6 @@ module.exports = {
   registerUser,
   loginUser,
   createAdmin,
+  updateProfile,
+  changePassword,
 };

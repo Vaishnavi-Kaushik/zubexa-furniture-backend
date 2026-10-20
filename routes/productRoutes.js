@@ -16,17 +16,17 @@ const {
 // UPLOAD FOLDER
 // =========================================================
 
-const uploadDir = path.join(
-  __dirname,
-  "..",
-  "uploads"
-);
+const uploadDir = process.env.PRODUCT_UPLOAD_DIR
+  ? path.resolve(process.env.PRODUCT_UPLOAD_DIR)
+  : path.join(__dirname, "..", "uploads");
 
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, {
     recursive: true,
   });
 }
+
+console.log("PRODUCT IMAGE UPLOAD DIRECTORY:", uploadDir);
 
 // =========================================================
 // MULTER STORAGE
