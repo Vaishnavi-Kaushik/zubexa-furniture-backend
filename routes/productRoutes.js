@@ -447,7 +447,7 @@ router.post(
         req.files || []
       ).map(
         (file) =>
-          `/uploads/${file.filename}`
+          `https://images.zubexafurniture.com/uploads/${file.filename}`
       );
 
       // =====================================================
@@ -1090,7 +1090,7 @@ router.put(
         req.files || []
       ).map(
         (file) =>
-          `/uploads/${file.filename}`
+          `https://images.zubexafurniture.com/uploads/${file.filename}`
       );
 
       /*
